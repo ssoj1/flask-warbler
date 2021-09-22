@@ -27,3 +27,13 @@ class LoginForm(FlaskForm):
 
 class CSRFForm(FlaskForm):
     """Form for CSRF Token."""
+
+class EditUser(FlaskForm):
+    """Form for edting an existing user."""
+
+    username = StringField('Username', validators=[DataRequired()])
+    email = StringField('E-mail', validators=[DataRequired(), Email()])
+    image_url = StringField('(Optional) Image URL')
+    header_image_url = StringField('(Optional) Image URL')
+    bio = TextAreaField('Bio')
+    password = PasswordField('Password', render_kw={'readonly': True})

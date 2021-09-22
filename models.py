@@ -142,6 +142,12 @@ class User(db.Model):
 
         return False
 
+    @classmethod
+    def check_unique_email_username(cls, email, username):
+        """ Check if input email address and username are unique """
+
+        
+
 
 class Message(db.Model):
     """An individual message ("warble")."""
