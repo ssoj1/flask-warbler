@@ -51,13 +51,12 @@
         </li>
         <li><a href="/messages/new">New Message</a></li>
 
-        <form>
-          
+        <form method="POST" action="/logout">
           {{ g.csrf_form.hidden_tag() }}
           <li>
-            <a class="btn btn-danger btn-sm" formaction="/logout" formmethod="POST">
+            <button class="btn btn-danger btn-sm" >
               Logout
-            </a>
+            </button>
           </li>
         </form>
 

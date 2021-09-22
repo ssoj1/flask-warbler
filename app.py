@@ -2,6 +2,7 @@ import os
 
 from flask import Flask, render_template, request, flash, redirect, session, g
 from flask_debugtoolbar import DebugToolbarExtension
+from sqlalchemy import exc
 from sqlalchemy.exc import IntegrityError
 from werkzeug.exceptions import Unauthorized
 
@@ -34,6 +35,7 @@ connect_db(app)
 @app.before_request
 def add_user_to_g():
     """If we're logged in, add curr user to Flask global."""
+
     g.csrf_form = CSRFForm()
     if CURR_USER_KEY in session:
         g.user = User.query.get(session[CURR_USER_KEY])
@@ -108,25 +110,25 @@ def login():
 
         flash("Invalid credentials.", 'danger')
 
-    return render_template('users/login.html', form=form)
+    return render_template('users/login.html', form=form) #if someone is logged in, redirect to homepage
 
 
 @app.post('/logout')
 def logout():
     """Handle logout of user."""
 
-    user = User.query.get_or_404(session[CURR_USER_KEY])
-
     if g.csrf_form.validate_on_submit():
-        session.pop(user.id)
-        flash('You have logged out :( Goodbye')
-        return redirect ('/login')
+        do_logout()
 
-    else: 
-        raise Unauthorized()
+        flash('You have logged out :( Goodbye')
+        
+    return redirect('/login')
+
+
 
 ##############################################################################
 # General user routes:
+
 
 @app.get('/users')
 def list_users():
@@ -148,7 +150,7 @@ def list_users():
 @app.get('/users/<int:user_id>')
 def users_show(user_id):
     """Show user profile."""
-    
+
     user = User.query.get_or_404(user_id)
 
     return render_template('users/show.html', user=user)
@@ -221,37 +223,43 @@ def update_profile():
     form = EditUser(obj=user)
 
     if form.validate_on_submit():
-        username = form.username.data
-        email = form.email.data
-        image_url = form.image_url.data
-        header_image_url = form.header_image_url.data
-        bio = form.bio.data
+        try: 
+            username = form.username.data
+            email = form.email.data
+            image_url = form.image_url.data
+            header_image_url = form.header_image_url.data
+            bio = form.bio.data
 
-        if username != g.user.username:
-            if not User.check_unique_field("username", username):
-                flash('Please try another username - it is not unique')
-                return render_template('/users/edit.html', form=form)
+            # if username != g.user.username:
+            #     if not User.check_unique_username(username):
+            #         flash('Please try another username - it is not unique')
+            #         return render_template('/users/edit.html', form=form)
 
-        if email != g.user.email:
-            if not User.check_unique_field("email", email):
-                flash('Please try another email - it is not unique')
-                return render_template('/users/edit.html', form=form)
+            # if email != g.user.email:
+            #     if not User.check_unique_email(email):
+            #         flash('Please try another email - it is not unique')
+            #         return render_template('/users/edit.html', form=form)
 
-        #request.json.get(username,user.username)
-        #user.username = form.username.data.get(username, user.username)
+            user.username = username
+            user.email = email
+            user.image_url = image_url or "/static/images/default-pic.png"
+            user.header_image_url = header_image_url or "/static/images/warbler-hero.jpg"
+            user.bio = bio
 
-        user.username = username
-        user.email = email
-        user.image_url = image_url
-        user.header_image_url = header_image_url
-        user.bio = bio
+            db.session.commit()
 
-        db.session.commit()
+        except IntegrityError:
 
-        flash('Profile successfuly updated!')        
+            db.session.rollback()
+            
+            flash("Username or email already taken", 'danger')
+            return render_template('users/signup.html', form=form)
+        
+        flash('Profile successfuly updated!')
         return redirect(f'/users/{g.user.id}')
 
     return render_template('/users/edit.html', form=form)
+
 
 @app.post('/users/delete')
 def delete_user():
@@ -331,8 +339,14 @@ def homepage():
     """
 
     if g.user:
+        following_ids = [              
+            following_user.id for
+            following_user in
+            g.user.following] + [g.user.id]
+
         messages = (Message
                     .query
+                    .filter(Message.user_id.in_(following_ids))
                     .order_by(Message.timestamp.desc())
                     .limit(100)
                     .all())
