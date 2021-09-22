@@ -143,10 +143,14 @@ class User(db.Model):
         return False
 
     @classmethod
-    def check_unique_email_username(cls, email, username):
-        """ Check if input email address and username are unique """
+    def check_unique_field(cls, column, field):
+        """Return False if field exists in database for a given column. 
+        Else returns True"""
 
-        
+        record = cls.query.filter_by(column=field).one_or_none()
+        if record:
+            return False
+        return True
 
 
 class Message(db.Model):

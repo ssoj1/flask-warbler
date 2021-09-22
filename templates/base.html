@@ -52,7 +52,8 @@
         <li><a href="/messages/new">New Message</a></li>
 
         <form>
-          {{ form.hidden_tag() }}
+          
+          {{ g.csrf_form.hidden_tag() }}
           <li>
             <a class="btn btn-danger btn-sm" formaction="/logout" formmethod="POST">
               Logout

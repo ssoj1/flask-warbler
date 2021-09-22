@@ -34,7 +34,7 @@ connect_db(app)
 @app.before_request
 def add_user_to_g():
     """If we're logged in, add curr user to Flask global."""
-
+    g.csrf_form = CSRFForm()
     if CURR_USER_KEY in session:
         g.user = User.query.get(session[CURR_USER_KEY])
 
@@ -117,9 +117,7 @@ def logout():
 
     user = User.query.get_or_404(session[CURR_USER_KEY])
 
-    form = CSRFForm()
-
-    if form.validate_on_submit():
+    if g.csrf_form.validate_on_submit():
         session.pop(user.id)
         flash('You have logged out :( Goodbye')
         return redirect ('/login')
@@ -150,7 +148,7 @@ def list_users():
 @app.get('/users/<int:user_id>')
 def users_show(user_id):
     """Show user profile."""
-
+    
     user = User.query.get_or_404(user_id)
 
     return render_template('users/show.html', user=user)
@@ -210,15 +208,17 @@ def stop_following(follow_id):
     return redirect(f"/users/{g.user.id}/following")
 
 
-@app.route('/users/<int:user_id>', methods=["GET", "POST"])
-def update_profile(user_id):
+@app.route('/users/profile', methods=["GET", "POST"])
+def update_profile():
     """Update profile for current user."""
 
     if not g.user:
         flash("Access unauthorized.", "danger")
         return redirect("/")
 
-    form = EditUser()
+    user = User.query.get_or_404(g.user.id)
+
+    form = EditUser(obj=user)
 
     if form.validate_on_submit():
         username = form.username.data
@@ -227,8 +227,31 @@ def update_profile(user_id):
         header_image_url = form.header_image_url.data
         bio = form.bio.data
 
-        
+        if username != g.user.username:
+            if not User.check_unique_field("username", username):
+                flash('Please try another username - it is not unique')
+                return render_template('/users/edit.html', form=form)
 
+        if email != g.user.email:
+            if not User.check_unique_field("email", email):
+                flash('Please try another email - it is not unique')
+                return render_template('/users/edit.html', form=form)
+
+        #request.json.get(username,user.username)
+        #user.username = form.username.data.get(username, user.username)
+
+        user.username = username
+        user.email = email
+        user.image_url = image_url
+        user.header_image_url = header_image_url
+        user.bio = bio
+
+        db.session.commit()
+
+        flash('Profile successfuly updated!')        
+        return redirect(f'/users/{g.user.id}')
+
+    return render_template('/users/edit.html', form=form)
 
 @app.post('/users/delete')
 def delete_user():
@@ -306,7 +329,7 @@ def homepage():
     - anon users: no messages
     - logged in: 100 most recent messages of followed_users
     """
-    breakpoint()
+
     if g.user:
         messages = (Message
                     .query

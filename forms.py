@@ -36,4 +36,4 @@ class EditUser(FlaskForm):
     image_url = StringField('(Optional) Image URL')
     header_image_url = StringField('(Optional) Image URL')
     bio = TextAreaField('Bio')
-    password = PasswordField('Password', render_kw={'readonly': True})
+    password = PasswordField('Password')
