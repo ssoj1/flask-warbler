@@ -2,14 +2,18 @@
 
 # run these tests like:
 #
-#    python -m unittest test_user_model.py
+#    python3 -m unittest test_user_model.py
 
 
 import os
 from unittest import TestCase
 
-from models import db, User, Message, Follows
+from sqlalchemy.exc import IntegrityError
 
+from models import db, User, Message, Follows
+from flask_bcrypt import Bcrypt
+
+bcrypt = Bcrypt()
 # BEFORE we import our app, let's set an environmental variable
 # to use a different database for tests (we need to do this
 # before we import our app, since that will have already
@@ -38,17 +42,17 @@ class UserModelTestCase(TestCase):
         User.query.delete()
 
         self.client = app.test_client()
-        
+        hashed_pwd = bcrypt.generate_password_hash("HASHED_PASSWORD111",4).decode('UTF-8')
         test_user_1 = User(
             email="test@test1.com",
             username="testuser1",
-            password="HASHED_PASSWORD111"
+            password=hashed_pwd
             )
 
         test_user_2 = User(
             email="test2@test2.com",
             username="testuser2",
-            password="HASHED_PASSWORD222"
+            password=hashed_pwd
             )
 
         db.session.add_all([test_user_1, test_user_2])
@@ -57,6 +61,9 @@ class UserModelTestCase(TestCase):
         self.user_1 = User.query.filter(User.email=="test@test1.com").first()
         self.user_2 = User.query.filter(User.email=="test2@test2.com").first()
 
+    def tearDown(self):
+        """Rollback fouled transactions from tests"""
+        db.session.rollback()
 
     def test_user_model(self):
         """Does basic model work?"""
@@ -109,11 +116,61 @@ class UserModelTestCase(TestCase):
         self.assertTrue(self.user_1.is_followed_by(self.user_2))
         self.assertFalse(self.user_2.is_followed_by(self.user_1))
 
+    def test_user_signup(self):
+        """Does User.signup class method create a new user instance
+        with valid credentials"""
+
+        user = User.signup(
+            username="test_user_signup",
+            email="test_user_signup@gmail.com",
+            password="test_user_signup_pwd",
+            image_url=".jpg"
+        )
+
+        db.session.commit()
+        find_test_user = User.query.filter(User.username=="test_user_signup").first()
+        self.assertTrue(find_test_user)
+        self.assertEqual(find_test_user.email,"test_user_signup@gmail.com")
+
+    def test_invalid_user_signup(self):
+        """Does User.signup class method fail to create a new user with invalid inputs"""
+
+        user_username = User.signup(
+            username="testuser1",
+            email="test_user_signup@gmail.com",
+            password="test_user_signup_pwd",
+            image_url=".jpg"
+        )
+
+        self.assertRaises(IntegrityError, db.session.commit)
+        db.session.rollback()
+
+        user_email = User.signup(
+            username="test_user_signup",
+            email="test@test1.com",
+            password="test_user_signup_pwd",
+            image_url=".jpg"
+        )
+
+        self.assertRaises(IntegrityError, db.session.commit)
 
 
+    def test_user_authenticate(self):
+        """Does User.authenticate class method return a user
+        given a valid username & password"""
 
-# Does User.signup successfully create a new user given valid credentials?
-# Does User.signup fail to create a new user if any of the validations (eg uniqueness, non-nullable fields) fail?
-# Does User.authenticate successfully return a user when given a valid username and password?
-# Does User.authenticate fail to return a user when the username is invalid?
-# Does User.authenticate fail to return a user when the password is invalid?
+        user = User.authenticate(
+            username="testuser1", 
+            password="HASHED_PASSWORD111")
+        self.assertTrue(isinstance(user, User))
+
+        user_wrong_username = User.authenticate(
+            username="not_the_username", 
+            password="HASHED_PASSWORD111")
+        self.assertFalse(user_wrong_username)
+
+        user_wrong_pwd = User.authenticate(
+            username="testuser1", 
+            password="not_the_password")
+        self.assertFalse(user_wrong_pwd)
+
