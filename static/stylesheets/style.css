@@ -493,6 +493,11 @@ p.card-bio {
   background-color: #62676c;
 }
 
+.like-btn {
+  position: relative;
+  z-index: 3;
+}
+
 #messages.no-hover .message-area {
   width: 100%;
 }

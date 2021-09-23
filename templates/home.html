@@ -52,10 +52,20 @@
             <a href="/users/{{ msg.user.id }}">
               <img src="{{ msg.user.image_url }}" alt="" class="timeline-image">
             </a>
+            <form action='/messages/{{ msg.id }}/like' method="POST">
+              {{ g.csrf_form.hidden_tag() }}
+
+              {% if g.user in msg.users %}
+                <button class="fas fa-star like-btn"></button>
+              {% else %}
+                <button class="far fa-star like-btn"></button>
+              {% endif %}
+            </form>
             <div class="message-area">
               <a href="/users/{{ msg.user.id }}">@{{ msg.user.username }}</a>
               <span class="text-muted">{{ msg.timestamp.strftime('%d %B %Y') }}</span>
               <p>{{ msg.text }}</p>
+              
             </div>
           </li>
         {% endfor %}

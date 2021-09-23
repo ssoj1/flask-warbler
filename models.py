@@ -4,10 +4,28 @@ from datetime import datetime
 
 from flask_bcrypt import Bcrypt
 from flask_sqlalchemy import SQLAlchemy
+from sqlalchemy.orm import backref
 
 bcrypt = Bcrypt()
 db = SQLAlchemy()
 
+
+class Like(db.Model):
+    """Connection of a user <-> liked_messages."""
+
+    __tablename__ = 'likes'
+
+    user_liking_id = db.Column(
+        db.Integer,
+        db.ForeignKey('users.id', ondelete="cascade"),
+        primary_key=True,
+    )
+
+    liked_message_id = db.Column(
+        db.Integer,
+        db.ForeignKey('messages.id', ondelete="cascade"),
+        primary_key=True,
+    )
 
 class Follows(db.Model):
     """Connection of a follower <-> followed_user."""
@@ -86,6 +104,12 @@ class User(db.Model):
         secondary="follows",
         primaryjoin=(Follows.user_following_id == id),
         secondaryjoin=(Follows.user_being_followed_id == id)
+    )
+
+    likes = db.relationship(
+        "Message",
+        secondary="likes",
+        backref="users"
     )
 
     def __repr__(self):

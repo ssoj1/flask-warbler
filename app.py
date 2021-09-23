@@ -7,7 +7,7 @@ from sqlalchemy.exc import IntegrityError
 from werkzeug.exceptions import Unauthorized
 
 from forms import EditUser, UserAddForm, LoginForm, MessageForm, CSRFForm
-from models import db, connect_db, User, Message
+from models import db, connect_db, User, Message, Like
 
 import dotenv
 dotenv.load_dotenv()
@@ -325,6 +325,28 @@ def messages_destroy(message_id):
 
     return redirect(f"/users/{g.user.id}")
 
+@app.post('/messages/<int:message_id>/like')
+def like_or_unlike_message(message_id):
+    """Like or unlike a message"""
+    form = CSRFForm()
+    if form.validate_on_submit():
+        is_liked_by_user = Like.query.filter(
+            Like.liked_message_id==message_id and 
+            Like.user_liking_id==g.user.id).one_or_none()
+        breakpoint()
+        #if exists, unlike it
+        #if doesn't, add new instance
+        if is_liked_by_user: 
+            db.session.delete(is_liked_by_user)
+        else:
+            like = Like(
+                user_liking_id=g.user.id,
+                liked_message_id=message_id)
+            db.session.add(like)
+
+        db.session.commit()
+        
+    return redirect('/')    
 
 ##############################################################################
 # Homepage and error pages
