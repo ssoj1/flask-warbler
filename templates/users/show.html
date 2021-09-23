@@ -1,37 +1,37 @@
 {% extends 'users/detail.html' %}
 {% block user_details %}
-  <div class="col-sm-6">
-    <ul class="list-group" id="messages">
+<div class="col-sm-6">
+  <ul class="list-group" id="messages">
 
-      {% for message in user.messages %}
+    {% for message in user.messages %}
 
-        <li class="list-group-item">
-          <a href="/messages/{{ message.id }}" class="message-link"/>
+    <li class="list-group-item">
+      <a href="/messages/{{ message.id }}" class="message-link">
+        <a href="/users/{{ user.id }}">
+          <img src="{{ user.image_url }}" alt="user image" class="timeline-image">
+        </a>
+        {% if g.user != user %}
+        <form action='/users/{{ user.id }}/{{ message.id }}' method="POST">
+          {{ g.csrf_form.hidden_tag() }}
 
-          <a href="/users/{{ user.id }}">
-            <img src="{{ user.image_url }}" alt="user image" class="timeline-image">
-          </a>
-          <form action='/users/{{ user.id }}' method="POST">
-            {{ g.csrf_form.hidden_tag() }}
-          
-            {% if g.user in message.users %}
-              <button class="fas fa-star like-btn"></button>
-            {% else %}
-              <button class="far fa-star like-btn"></button>
-            {% endif %}
-          </form>
-          <div class="message-area">
-            <a href="/users/{{ user.id }}">@{{ user.username }}</a>
-            <span class="text-muted">
-              {{ message.timestamp.strftime('%d %B %Y') }}
-            </span>
-            <p>{{ message.text }}</p>
-          </div>
-        </li>
+          {% if g.user in message.users %}
+          <button class="fas fa-star like-btn"></button>
+          {% else %}
+          <button class="far fa-star like-btn"></button>
+          {% endif %}
+        </form>
+        {% endif %}
+        <div class="message-area">
+          <a href="/users/{{ user.id }}">@{{ user.username }}</a>
+          <span class="text-muted">
+            {{ message.timestamp.strftime('%d %B %Y') }}
+          </span>
+          <p>{{ message.text }}</p>
+        </div>
+    </li>
 
-      {% endfor %}
+    {% endfor %}
 
-    </ul>
-  </div>
+  </ul>
+</div>
 {% endblock %}
-

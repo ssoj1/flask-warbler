@@ -301,7 +301,7 @@ def messages_show(message_id):
     form = CSRFForm()
 
     if form.validate_on_submit():
-        like_or_unlike_message(message_id)
+        g.user.like_or_unlike_message(message_id)
 
     msg = Message.query.get(message_id)
     return render_template('messages/show.html', message=msg)
@@ -325,23 +325,38 @@ def messages_destroy(message_id):
 @app.post('/messages/<int:message_id>/like')
 def like_or_unlike_from_users(message_id):
     """Like or unlike a message from the /users page"""
-
-    like_or_unlike_message(message_id)
+    
+    form = CSRFForm()
+    if form.validate_on_submit():
+        g.user.like_or_unlike_message(message_id)
 
     return redirect('/')
-
+    #could raise an error if csrf error
+    #split if statement (in route), like (singular func), unlike (singular func)
+    # yagni
+    # ya ain't gonna neeeed it
 
 @app.get('/users/<int:user_id>/likes')
 def show_liked_messages(user_id):
     """ Show liked messages on a given users detail page """
 
-    liked_messages = g.user.likes
+    liked_messages = g.user.liked_messages
 
     return render_template('users/likes.html',
                            messages=liked_messages,
                            user=g.user
                            )
 
+@app.post('/users/<int:user_id>/<int:message_id>')
+def like_message_from_user_page(user_id, message_id):
+    """Show a message."""
+
+    form = CSRFForm()
+    if form.validate_on_submit():
+        g.user.like_or_unlike_message(message_id)
+
+    user = User.query.get(user_id)
+    return redirect(f'/users/{user_id}')
 
 ##############################################################################
 # Homepage and error pages
@@ -388,26 +403,3 @@ def add_header(response):
     # https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Cache-Control
     response.cache_control.no_store = True
     return response
-
-######################### Helper Functions ##################################
-
-
-def like_or_unlike_message(message_id):
-    """Like or unlike a message """
-
-    form = CSRFForm()
-
-    if form.validate_on_submit():
-        is_liked_by_user = Like.query.filter(
-            Like.liked_message_id == message_id and
-            Like.user_liking_id == g.user.id).one_or_none()
-
-        if is_liked_by_user:
-            db.session.delete(is_liked_by_user)
-        else:
-            like = Like(
-                user_liking_id=g.user.id,
-                liked_message_id=message_id)
-            db.session.add(like)
-
-        db.session.commit()

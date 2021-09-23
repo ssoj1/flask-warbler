@@ -105,8 +105,8 @@ class User(db.Model):
         primaryjoin=(Follows.user_following_id == id),
         secondaryjoin=(Follows.user_being_followed_id == id)
     )
-
-    likes = db.relationship(
+    #liked_messages (what's being given back are messages, not likes)
+    liked_messages = db.relationship(
         "Message",
         secondary="likes",
         backref="users"
@@ -126,6 +126,26 @@ class User(db.Model):
 
         found_user_list = [user for user in self.following if user == other_user]
         return len(found_user_list) == 1
+
+    def like_or_unlike_message(self, message_id):
+        """Like or unlike a message """
+
+        message = Message.query.get_or_404(message_id)
+
+        if message.user.id != self.id:
+            is_liked_by_user = Like.query.filter(
+                Like.liked_message_id == message_id and
+                Like.user_liking_id == self.id).one_or_none()
+
+            if is_liked_by_user:
+                db.session.delete(is_liked_by_user)
+            else:
+                like = Like(
+                    user_liking_id=self.id,
+                    liked_message_id=message_id)
+                db.session.add(like)
+
+            db.session.commit()
 
     @classmethod
     def signup(cls, username, email, password, image_url):
@@ -206,3 +226,6 @@ def connect_db(app):
 
     db.app = app
     db.init_app(app)
+
+
+
