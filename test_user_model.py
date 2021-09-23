@@ -27,33 +27,36 @@ from app import app
 
 db.create_all()
 
-TEST_USER_1 = User(
-    email="test@test1.com",
-    username="testuser1",
-    password="HASHED_PASSWORD111"
-    )
-
-TEST_USER_2 = User(
-    email="test2@test2.com",
-    username="testuser2",
-    password="HASHED_PASSWORD222"
-    )
-
 class UserModelTestCase(TestCase):
     """Test views for messages."""
 
     def setUp(self):
         """Create test client, add sample data."""
 
-        User.query.delete()
         Message.query.delete()
         Follows.query.delete()
+        User.query.delete()
 
         self.client = app.test_client()
         
-        user = TEST_USER_1
-        db.session.add(user)
+        test_user_1 = User(
+            email="test@test1.com",
+            username="testuser1",
+            password="HASHED_PASSWORD111"
+            )
+
+        test_user_2 = User(
+            email="test2@test2.com",
+            username="testuser2",
+            password="HASHED_PASSWORD222"
+            )
+
+        db.session.add_all([test_user_1, test_user_2])
         db.session.commit()
+
+        self.user_1 = User.query.filter(User.email=="test@test1.com").first()
+        self.user_2 = User.query.filter(User.email=="test2@test2.com").first()
+
 
     def test_user_model(self):
         """Does basic model work?"""
@@ -76,35 +79,39 @@ class UserModelTestCase(TestCase):
         f"<User #{self.id}: {self.username}, {self.email}>"""
     
         user = User.query.filter(User.email=="test@test1.com").first()
-        breakpoint()
+
         self.assertEqual(user.__repr__(), 
             (f"<User #{user.id}: {user.username}, {user.email}>"))
 
-# Does the repr method work as expected?
-# return f"<User #{self.id}: {self.username}, {self.email}>"
-# def test_create_dessert(self):
-#     with app.test_client() as client:
-#         resp = client.post(
-#             "/desserts", json={
-#                 "name": "TestCake2",
-#                 "calories": 20,
-#             })
-#         self.assertEqual(resp.status_code, 201)
+    def test_is_following(self):
+        """Does is_following correctly detect when a user is and is not
+        following another user"""
 
-#         # don't know what ID it will be, so test then remove
-#         self.assertIsInstance(resp.json['dessert']['id'], int)
-#         data = resp.json.copy()
-#         del data['dessert']['id']
+        new_follow = Follows(user_being_followed_id = self.user_1.id, 
+                            user_following_id = self.user_2.id)
 
-#         self.assertEqual(
-#             data,
-#             {"dessert": {'name': 'TestCake2', 'calories': 20}})
+        db.session.add(new_follow)
+        db.session.commit()
 
-#         self.assertEqual(Dessert.query.count(), 2)
-# Does is_following successfully detect when user1 is following user2?
-# Does is_following successfully detect when user1 is not following user2?
-# Does is_followed_by successfully detect when user1 is followed by user2?
-# Does is_followed_by successfully detect when user1 is not followed by user2?
+        self.assertTrue(self.user_2.is_following(self.user_1))
+        self.assertFalse(self.user_1.is_following(self.user_2))
+
+    def test_is_followed_by(self):
+        """Does is_follwed_by correctly detect when a user is and is not
+        being followed by another user"""
+
+        new_follow = Follows(user_being_followed_id = self.user_1.id, 
+                            user_following_id = self.user_2.id)
+
+        db.session.add(new_follow)
+        db.session.commit()
+
+        self.assertTrue(self.user_1.is_followed_by(self.user_2))
+        self.assertFalse(self.user_2.is_followed_by(self.user_1))
+
+
+
+
 # Does User.signup successfully create a new user given valid credentials?
 # Does User.signup fail to create a new user if any of the validations (eg uniqueness, non-nullable fields) fail?
 # Does User.authenticate successfully return a user when given a valid username and password?
