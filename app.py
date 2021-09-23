@@ -1,4 +1,5 @@
 import os
+from re import template
 
 from flask import Flask, render_template, request, flash, redirect, session, g
 from flask_debugtoolbar import DebugToolbarExtension
@@ -110,7 +111,8 @@ def login():
 
         flash("Invalid credentials.", 'danger')
 
-    return render_template('users/login.html', form=form) #if someone is logged in, redirect to homepage
+    # if someone is logged in, redirect to homepage
+    return render_template('users/login.html', form=form)
 
 
 @app.post('/logout')
@@ -121,9 +123,8 @@ def logout():
         do_logout()
 
         flash('You have logged out :( Goodbye')
-        
-    return redirect('/login')
 
+    return redirect('/login')
 
 
 ##############################################################################
@@ -223,22 +224,12 @@ def update_profile():
     form = EditUser(obj=user)
 
     if form.validate_on_submit():
-        try: 
+        try:
             username = form.username.data
             email = form.email.data
             image_url = form.image_url.data
             header_image_url = form.header_image_url.data
             bio = form.bio.data
-
-            # if username != g.user.username:
-            #     if not User.check_unique_username(username):
-            #         flash('Please try another username - it is not unique')
-            #         return render_template('/users/edit.html', form=form)
-
-            # if email != g.user.email:
-            #     if not User.check_unique_email(email):
-            #         flash('Please try another email - it is not unique')
-            #         return render_template('/users/edit.html', form=form)
 
             user.username = username
             user.email = email
@@ -251,10 +242,10 @@ def update_profile():
         except IntegrityError:
 
             db.session.rollback()
-            
+
             flash("Username or email already taken", 'danger')
             return render_template('users/signup.html', form=form)
-        
+
         flash('Profile successfuly updated!')
         return redirect(f'/users/{g.user.id}')
 
@@ -303,9 +294,14 @@ def messages_add():
     return render_template('messages/new.html', form=form)
 
 
-@app.get('/messages/<int:message_id>')
+@app.route('/messages/<int:message_id>', methods=["GET", "POST"])
 def messages_show(message_id):
     """Show a message."""
+
+    form = CSRFForm()
+
+    if form.validate_on_submit():
+        like_or_unlike_message(message_id)
 
     msg = Message.query.get(message_id)
     return render_template('messages/show.html', message=msg)
@@ -325,28 +321,27 @@ def messages_destroy(message_id):
 
     return redirect(f"/users/{g.user.id}")
 
-@app.post('/messages/<int:message_id>/like')
-def like_or_unlike_message(message_id):
-    """Like or unlike a message"""
-    form = CSRFForm()
-    if form.validate_on_submit():
-        is_liked_by_user = Like.query.filter(
-            Like.liked_message_id==message_id and 
-            Like.user_liking_id==g.user.id).one_or_none()
-        breakpoint()
-        #if exists, unlike it
-        #if doesn't, add new instance
-        if is_liked_by_user: 
-            db.session.delete(is_liked_by_user)
-        else:
-            like = Like(
-                user_liking_id=g.user.id,
-                liked_message_id=message_id)
-            db.session.add(like)
 
-        db.session.commit()
-        
-    return redirect('/')    
+@app.post('/messages/<int:message_id>/like')
+def like_or_unlike_from_users(message_id):
+    """Like or unlike a message from the /users page"""
+
+    like_or_unlike_message(message_id)
+
+    return redirect('/')
+
+
+@app.get('/users/<int:user_id>/likes')
+def show_liked_messages(user_id):
+    """ Show liked messages on a given users detail page """
+
+    liked_messages = g.user.likes
+
+    return render_template('users/likes.html',
+                           messages=liked_messages,
+                           user=g.user
+                           )
+
 
 ##############################################################################
 # Homepage and error pages
@@ -361,7 +356,7 @@ def homepage():
     """
 
     if g.user:
-        following_ids = [              
+        following_ids = [
             following_user.id for
             following_user in
             g.user.following] + [g.user.id]
@@ -393,3 +388,26 @@ def add_header(response):
     # https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Cache-Control
     response.cache_control.no_store = True
     return response
+
+######################### Helper Functions ##################################
+
+
+def like_or_unlike_message(message_id):
+    """Like or unlike a message """
+
+    form = CSRFForm()
+
+    if form.validate_on_submit():
+        is_liked_by_user = Like.query.filter(
+            Like.liked_message_id == message_id and
+            Like.user_liking_id == g.user.id).one_or_none()
+
+        if is_liked_by_user:
+            db.session.delete(is_liked_by_user)
+        else:
+            like = Like(
+                user_liking_id=g.user.id,
+                liked_message_id=message_id)
+            db.session.add(like)
+
+        db.session.commit()

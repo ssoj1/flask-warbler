@@ -166,27 +166,6 @@ class User(db.Model):
 
         return False
 
-    @classmethod
-    def check_unique_email(cls, email):
-        """Return False if email exists in database. Else returns True"""
-
-        record = cls.query.filter(cls.email==email).one_or_none()
-
-        if record:
-            return False
-
-        return True
-
-    @classmethod
-    def check_unique_username(cls, username):
-        """Return False if username exists in database. Else returns True"""
-
-        record = cls.query.filter(cls.username==username).one_or_none()
-
-        if record:
-            return False
-
-        return True
 
 
 class Message(db.Model):

@@ -12,6 +12,15 @@
           </a>
           <div class="message-area">
             <div class="message-heading">
+              <form action='/messages/{{ message.id }}' method="POST">
+                {{ g.csrf_form.hidden_tag() }}
+  
+                {% if g.user in message.users %}
+                  <button class="fas fa-star like-btn"></button>
+                {% else %}
+                  <button class="far fa-star like-btn"></button>
+                {% endif %}
+              </form>
               <a href="/users/{{ message.user.id }}">@{{ message.user.username }}</a>
               {% if g.user %}
                 {% if g.user.id == message.user.id %}
