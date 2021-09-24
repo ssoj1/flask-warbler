@@ -120,6 +120,24 @@ class MessageViewTestCase(TestCase):
             self.assertEqual(msg, [])
             self.assertIn("Add my message", html)
     
+    def test_message_add_while_logged_out(self):
+        """ Test that a user can't add a message while logged out """
+
+        with self.client as client:
+
+            Message.query.delete()
+            db.session.commit()
+
+            resp = client.post("/messages/new", data={"text": "Hello"}, follow_redirects=True)
+            html = resp.get_data(as_text=True)
+
+            self.assertEqual(resp.status_code, 200)
+
+            msg = Message.query.all()
+            self.assertEqual(msg, [])
+            self.assertIn("Access unauthorized", html)
+
+
     def test_message_show(self):
         """Testing that the correct message shows during get request, and whether
         message like button is toggled when liked"""
@@ -188,16 +206,21 @@ class MessageViewTestCase(TestCase):
             self.assertEqual(resp.status_code, 302)
             self.assertEqual(resp.location, f"http://localhost/users/{self.testuser1_id}")
 
+    def test_show_liked_messages(self):
+        """Test that a liked messages appear properly and unliked messages
+        do not appear"""
 
+        with self.client as client:
+            with client.session_transaction() as sess:
+                sess[CURR_USER_KEY] = self.testuser1_id
 
-#like_or_unlike_from_users(message_id) --> post '/messages/<int:message_id>/like'
-    #calls g.user.like_or_unlike_message(message_id)
-    #redirect to home page
+            user_1 = User.query.get(self.testuser1_id)
 
-#show_liked_messages(user_id) --> get '/users/<int:user_id>/likes'
-    #returns template 'users/likes.html',messages=liked_messages,user=g.user)
-    #check if a user's liked message is in html
+            user_1.like_or_unlike_message(self.test_message_u2_id)
 
-#like_message_from_user_page --> post '/users/<int:user_id>/<int:message_id>'
-    #if valid post form, calls like_or_unlike_message
-    #redirects to f'/users/{user_id}'
+            resp = client.get(f'/users/{self.testuser1_id}/likes')
+            html = resp.get_data(as_text=True)
+
+            self.assertEqual(resp.status_code, 200)
+            self.assertIn('test message from user 2', html)
+            self.assertNotIn('test message from user 1', html)
