@@ -143,13 +143,52 @@ class MessageViewTestCase(TestCase):
             html = resp.get_data(as_text=True)
 
             self.assertEqual(resp.status_code, 302)
-            self.assertEqual(resp.location, 'http://localhost/messages/show.html')
+            self.assertEqual(resp.location, f'http://localhost/messages/{self.test_message_u1_id}')
 
 
-#message_destory --> post '/messages/<int:message_id>/delete'
-    #if not current user, shows access denied
-    #otherwise grab message, delete from database
-    #redirect to f"/users/{g.user.id}"
+    def test_message_destroy(self):
+        """ Can a user delete their own message and check that the message 
+        doesn't appear after deleted"""
+
+        with self.client as client:
+            with client.session_transaction() as sess:
+                sess[CURR_USER_KEY] = self.testuser1_id
+
+            resp = client.post(f'/messages/{self.test_message_u1_id}/delete', 
+                                            follow_redirects=True)
+            html = resp.get_data(as_text=True)
+
+            self.assertEqual(resp.status_code, 200)
+            self.assertNotIn('test message from user 1', html)
+
+
+    def test_delete_message_of_other_user(self):
+        """Test that a user can't delete another user's message """
+
+        with self.client as client:
+            with client.session_transaction() as sess:
+                sess[CURR_USER_KEY] = self.testuser2_id
+
+            resp = client.post(f'/messages/{self.test_message_u1_id}/delete')
+
+            self.assertEqual(resp.status_code, 302)
+            self.assertEqual(resp.location, 
+                            f"http://localhost/users/{self.testuser2_id}")
+
+    def test_like_message_from_user_page(self):
+        """Test wether redirect to /users/user_id occurs after liking/unliking 
+        a message"""
+
+        with self.client as client:
+            with client.session_transaction() as sess:
+                sess[CURR_USER_KEY] = self.testuser2_id
+
+            resp = client.post(f'/users/{self.testuser1_id}/{self.test_message_u1_id}')
+
+            self.assertEqual(resp.status_code, 302)
+            self.assertEqual(resp.location, f"http://localhost/users/{self.testuser1_id}")
+
+
 
 #like_or_unlike_from_users(message_id) --> post '/messages/<int:message_id>/like'
     #calls g.user.like_or_unlike_message(message_id)

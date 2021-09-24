@@ -302,7 +302,7 @@ def messages_show(message_id):
 
     if form.validate_on_submit():
         g.user.like_or_unlike_message(message_id)
-        return redirect('/messages/show.html')
+        return redirect(f'/messages/{message_id}')
 
     msg = Message.query.get(message_id)
     return render_template('messages/show.html', message=msg)
@@ -321,21 +321,6 @@ def messages_destroy(message_id):
     db.session.commit()
 
     return redirect(f"/users/{g.user.id}")
-
-
-@app.post('/messages/<int:message_id>/like')
-def like_or_unlike_from_users(message_id):
-    """Like or unlike a message from the /users page"""
-    
-    form = CSRFForm()
-    if form.validate_on_submit():
-        g.user.like_or_unlike_message(message_id)
-
-    return redirect('/')
-    #could raise an error if csrf error
-    #split if statement (in route), like (singular func), unlike (singular func)
-    # yagni
-    # ya ain't gonna neeeed it
 
 @app.get('/users/<int:user_id>/likes')
 def show_liked_messages(user_id):
@@ -356,7 +341,6 @@ def like_message_from_user_page(user_id, message_id):
     if form.validate_on_submit():
         g.user.like_or_unlike_message(message_id)
 
-    user = User.query.get(user_id)
     return redirect(f'/users/{user_id}')
 
 ##############################################################################
