@@ -8,7 +8,7 @@
 import os
 from unittest import TestCase
 
-from models import db, connect_db, Message, User
+from models import db, connect_db, Message, User, Follows, Like
 
 # BEFORE we import our app, let's set an environmental variable
 # to use a different database for tests (we need to do this
@@ -38,35 +38,127 @@ class MessageViewTestCase(TestCase):
     def setUp(self):
         """Create test client, add sample data."""
 
-        User.query.delete()
+        db.drop_all()
+        db.create_all()
+
+        Like.query.delete()
+        Follows.query.delete()
         Message.query.delete()
-
-        self.client = app.test_client()
-
-        self.testuser = User.signup(username="testuser",
-                                    email="test@test.com",
-                                    password="testuser",
-                                    image_url=None)
+        User.query.delete()
 
         db.session.commit()
 
-    def test_add_message(self):
+        self.client = app.test_client()
+
+        testuser1 = User.signup(username="testuser",
+                                    email="test@test.com",
+                                    password="testuser",
+                                    image_url=None)
+        testuser1.id = 111
+        self.testuser1_id = 111
+        testuser2 = User.signup(username="testuser2",
+                                    email="test@test2.com",
+                                    password="testuser2",
+                                    image_url=None)
+        testuser2.id = 222
+        self.testuser2_id = 222
+        db.session.add_all([testuser1, testuser2])
+        db.session.commit()
+
+        test_message_u1 = Message(text='test message from user 1', user_id=111)
+        test_message_u1.id = 11
+        self.test_message_u1_id = 11
+        test_message_u2 = Message(text='test message from user 2', user_id=222)
+        test_message_u2.id = 22
+        self.test_message_u2_id = 22
+
+        # #self.new_follow = Follows(user_being_followed_id=111, user_following_id=222)
+
+        db.session.add_all([test_message_u1, test_message_u2])
+        db.session.commit()
+
+    def tearDown(self):
+        """Get rid of any fouled transactions"""
+        db.session.rollback()
+
+    def test_message_add(self):
         """Can use add a message?"""
 
         # Since we need to change the session to mimic logging in,
         # we need to use the changing-session trick:
 
-        with self.client as c:
-            with c.session_transaction() as sess:
-                sess[CURR_USER_KEY] = self.testuser.id
+        with self.client as client:
+            with client.session_transaction() as sess:
+                sess[CURR_USER_KEY] = self.testuser1_id
 
             # Now, that session setting is saved, so we can have
-            # the rest of ours test
+            # the rest of our test
+            Message.query.delete()
+            db.session.commit()
 
-            resp = c.post("/messages/new", data={"text": "Hello"})
+            resp = client.post("/messages/new", data={"text": "Hello"})
 
             # Make sure it redirects
             self.assertEqual(resp.status_code, 302)
 
             msg = Message.query.one()
             self.assertEqual(msg.text, "Hello")
+
+        with self.client as client:
+            with client.session_transaction() as sess:
+                sess[CURR_USER_KEY] = self.testuser1_id
+
+            Message.query.delete()
+            db.session.commit()
+
+            resp = client.post("/messages/new", data={"text": ""})
+            html = resp.get_data(as_text=True)
+
+            self.assertEqual(resp.status_code, 200)
+
+            msg = Message.query.all()
+            self.assertEqual(msg, [])
+            self.assertIn("Add my message", html)
+    
+    def test_message_show(self):
+        """Testing that the correct message shows during get request, and whether
+        message like button is toggled when liked"""
+
+        with self.client as client:
+            with client.session_transaction() as sess:
+                sess[CURR_USER_KEY] = self.testuser2_id
+
+            resp = client.get(f"/messages/{self.test_message_u1_id}")
+
+            html = resp.get_data(as_text=True)
+
+            self.assertEqual(resp.status_code, 200)
+            self.assertIn('test message from user 1', html)
+
+        with self.client as client:
+            with client.session_transaction() as sess:
+                sess[CURR_USER_KEY] = self.testuser2_id
+
+            resp = client.post(f"/messages/{self.test_message_u1_id}")
+            html = resp.get_data(as_text=True)
+
+            self.assertEqual(resp.status_code, 302)
+            self.assertEqual(resp.location, 'http://localhost/messages/show.html')
+
+
+#message_destory --> post '/messages/<int:message_id>/delete'
+    #if not current user, shows access denied
+    #otherwise grab message, delete from database
+    #redirect to f"/users/{g.user.id}"
+
+#like_or_unlike_from_users(message_id) --> post '/messages/<int:message_id>/like'
+    #calls g.user.like_or_unlike_message(message_id)
+    #redirect to home page
+
+#show_liked_messages(user_id) --> get '/users/<int:user_id>/likes'
+    #returns template 'users/likes.html',messages=liked_messages,user=g.user)
+    #check if a user's liked message is in html
+
+#like_message_from_user_page --> post '/users/<int:user_id>/<int:message_id>'
+    #if valid post form, calls like_or_unlike_message
+    #redirects to f'/users/{user_id}'

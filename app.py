@@ -302,6 +302,7 @@ def messages_show(message_id):
 
     if form.validate_on_submit():
         g.user.like_or_unlike_message(message_id)
+        return redirect('/messages/show.html')
 
     msg = Message.query.get(message_id)
     return render_template('messages/show.html', message=msg)
