@@ -10,6 +10,9 @@ from werkzeug.exceptions import Unauthorized
 from forms import EditUser, UserAddForm, LoginForm, MessageForm, CSRFForm
 from models import db, connect_db, User, Message, Like
 
+app.config['SQLALCHEMY_DATABASE_URI'] = (
+    os.environ['DATABASE_URL'].replace("postgres://", "postgresql://"))
+
 import dotenv
 dotenv.load_dotenv()
 
