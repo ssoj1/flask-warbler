@@ -105,7 +105,7 @@ class User(db.Model):
         primaryjoin=(Follows.user_following_id == id),
         secondaryjoin=(Follows.user_being_followed_id == id)
     )
-    #liked_messages (what's being given back are messages, not likes)
+    
     liked_messages = db.relationship(
         "Message",
         secondary="likes",

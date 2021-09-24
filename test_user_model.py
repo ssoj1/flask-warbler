@@ -10,7 +10,7 @@ from unittest import TestCase
 
 from sqlalchemy.exc import IntegrityError
 
-from models import db, User, Message, Follows
+from models import db, User, Message, Follows, Like
 from flask_bcrypt import Bcrypt
 
 bcrypt = Bcrypt()
@@ -23,7 +23,7 @@ os.environ['DATABASE_URL'] = "postgresql:///warbler_test"
 
 # Now we can import app
 
-from app import app
+from app import app 
 
 # Create our tables (we do this here, so we only create the tables
 # once for all tests --- in each test, we'll delete the data
@@ -32,15 +32,16 @@ from app import app
 db.create_all()
 
 class UserModelTestCase(TestCase):
-    """Test views for messages."""
+    """Test user model and instance methods."""
 
     def setUp(self):
         """Create test client, add sample data."""
 
+        Like.query.delete()
         Message.query.delete()
         Follows.query.delete()
         User.query.delete()
-
+  
         self.client = app.test_client()
         hashed_pwd = bcrypt.generate_password_hash("HASHED_PASSWORD111",4).decode('UTF-8')
         test_user_1 = User(
@@ -173,4 +174,19 @@ class UserModelTestCase(TestCase):
             username="testuser1", 
             password="not_the_password")
         self.assertFalse(user_wrong_pwd)
+
+    def test_like_or_unlike_message(self):
+        """Does like_or_unlike_message properly like or unlike a message"""
+
+        new_message = Message(text="Heyo", user_id=self.user_1.id)
+
+        db.session.add(new_message)
+        db.session.commit()
+  
+        message_id = new_message.id
+        
+        self.user_2.like_or_unlike_message(message_id)
+        user_liking = Like.query.filter(Like.liked_message_id == message_id).first()
+
+        self.assertTrue(user_liking.user_liking_id == self.user_2.id)
 
