@@ -496,7 +496,10 @@ p.card-bio {
 .like-btn {
   position: relative;
   z-index: 3;
+  border: none;
+  background-color: white;
 }
+
 
 #messages.no-hover .message-area {
   width: 100%;

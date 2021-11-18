@@ -307,6 +307,43 @@ def messages_show(message_id):
     msg = Message.query.get(message_id)
     return render_template('messages/show.html', message=msg)
 
+############
+@app.route('/messages/<int:message_id>/like', methods=["GET", "POST"])
+def toggle_like(message_id):
+    """Toggle a liked message for the currently-logged-in user."""
+
+    form = CSRFForm()
+
+    if form.validate_on_submit():
+        g.user.like_or_unlike_message(message_id)
+        return redirect('/')
+
+    return redirect('/')
+
+
+
+# def toggle_like(message_id):
+#     """Toggle a liked message for the currently-logged-in user."""
+
+#     form = g.csrf_form
+
+#     if not form.validate_on_submit() or not g.user:
+#         flash("Access unauthorized.", "danger")
+#         return redirect("/")
+
+#     liked_message = Message.query.get_or_404(message_id)
+#     if liked_message.user_id == g.user.id:
+#         return abort(403)
+
+#     if liked_message in g.user.liked_messages:
+#         g.user.liked_messages.remove(liked_message)
+#     else:
+#         g.user.liked_messages.append(liked_message)
+
+#     db.session.commit()
+
+#     return redirect("/")
+
 
 @app.post('/messages/<int:message_id>/delete')
 def messages_destroy(message_id):
