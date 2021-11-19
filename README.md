@@ -1,6 +1,6 @@
 # flask-warbler
 
-Twitter clone built with Python, Flask, SQLAlchemy,PostgreSQL, and uses template-rendering via Jinja.
+Twitter clone built with Python, Flask, SQLAlchemy, PostgreSQL, and uses template-rendering via Jinja.
 
 **To create your Python Virtual Environment:**  
 $ python3 -m venv venv  
