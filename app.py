@@ -1,14 +1,14 @@
 import os
-from re import template
+# from re import template
 
 from flask import Flask, render_template, request, flash, redirect, session, g
 from flask_debugtoolbar import DebugToolbarExtension
-from sqlalchemy import exc
+# from sqlalchemy import exc
 from sqlalchemy.exc import IntegrityError
-from werkzeug.exceptions import Unauthorized
+# from werkzeug.exceptions import Unauthorized
 
 from forms import EditUser, UserAddForm, LoginForm, MessageForm, CSRFForm
-from models import db, connect_db, User, Message, Like
+from models import db, connect_db, User, Message
 
 import dotenv
 dotenv.load_dotenv()
