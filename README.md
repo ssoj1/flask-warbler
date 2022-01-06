@@ -17,5 +17,8 @@ $ source venv/bin/activate
 flask run  
 
 **To run tests:**  
-python3 -m unittest <name-of-python-file>  
+python3 -m unittest test_message_model.py
+FLASK_ENV=production python -m unittest test_message_views.py
+python3 -m unittest test_user_model.py
+FLASK_ENV=production python -m unittest test_user_views.py
 
