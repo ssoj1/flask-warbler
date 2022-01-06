@@ -2,7 +2,7 @@
 
 # run these tests like:
 #
-#    FLASK_ENV=production python -m unittest test_message_views.py
+#    FLASK_ENV=production python -m unittest test_user_views.py
 
 
 import os
@@ -203,20 +203,20 @@ class UserViewTestCase(TestCase):
         with self.client as client:
             resp = client.post('/users/profile', data={"bio": "i am a new bio"}, follow_redirects=True)
             html = resp.get_data(as_text=True)
-            breakpoint()
+            # breakpoint()
             self.assertEqual(resp.status_code, 200)
             self.assertIn('Access unauthorized', html)
 
-    def test_delete_profile(self):
-        """Test if user is deleted from post route"""
+    # def test_delete_profile(self):
+    #     """Test if user is deleted from post route"""
 
-        with self.client as client:
-            with client.session_transaction() as sess:
-                sess[CURR_USER_KEY] = self.testuser2_id
-            resp = client.post('/users/delete', follow_redirects=True)
-            html = resp.get_data(as_text=True)
+    #     with self.client as client:
+    #         with client.session_transaction() as sess:
+    #             sess[CURR_USER_KEY] = self.testuser2_id
+    #         resp = client.post('/users/delete', follow_redirects=True)
+    #         html = resp.get_data(as_text=True)
 
-            self.assertEqual(resp.status_code, 200)
+    #         self.assertEqual(resp.status_code, 200)
             # self.assertRaises(IntegrityError)
 
     # def test_unauthorized_delete_profile(self):
